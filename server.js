@@ -2,6 +2,8 @@ const express = require('express');
 const app = express();
 const port = 3001;
 
+let redAlerts = [];
+
 // Dados meteorológicos iniciais por bairro
 let weatherData = {
     "Boa Viagem": {
@@ -60,6 +62,10 @@ const updateWeatherData = () => {
 
         if (precipitation > 40) {
             weatherData[neighborhood].alert = 'Vermelho';
+            // Salva automaticamente o alerta vermelho
+            const newRedAlert = { location: neighborhood, details: `Alerta vermelho devido a precipitação de ${precipitation}mm`, timestamp: new Date() };
+            redAlerts.push(newRedAlert);
+            console.log('Novo alerta vermelho automático salvo:', newRedAlert);
         } else if (precipitation > 20) {
             weatherData[neighborhood].alert = 'Amarelo';
         } else {
@@ -71,6 +77,9 @@ const updateWeatherData = () => {
 // Atualizar dados meteorológicos a cada 1 minuto
 setInterval(updateWeatherData, 1 * 60 * 1000);
 
+// Middleware para tratar o corpo das requisições como JSON
+app.use(express.json());
+
 // Rota para obter dados meteorológicos por bairro
 app.get('/weather/:neighborhood', (req, res) => {
     const neighborhood = req.params.neighborhood;
@@ -79,6 +88,19 @@ app.get('/weather/:neighborhood', (req, res) => {
     } else {
         res.status(404).send('Bairro não encontrado');
     }
+});
+
+// Rota para obter todos os alertas vermelhos
+app.get('/red-alerts', (req, res) => {
+    res.json(redAlerts);
+});
+
+// Rota para receber novos alertas vermelhos
+app.post('/red-alerts', (req, res) => {
+    const { location, details } = req.body;
+    const newRedAlert = { location, details, timestamp: new Date() };
+    redAlerts.push(newRedAlert);
+    res.status(201).json({ message: 'Alerta vermelho salvo com sucesso!' });
 });
 
 app.listen(port, () => {
